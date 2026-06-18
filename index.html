@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业务工作驾驶舱</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f2f5;--card:#fff;--text:#1a1a2e;--text2:#555;--accent:#2563eb;--accent2:#1d4ed8;
+  --tab:#e8eaf0;--border:#dde1e9;--shadow:0 2px 8px rgba(0,0,0,.08);--radius:10px;
+  --green:#16a34a;--orange:#ea580c;--purple:#7c3aed;--red:#dc2626;
+}
+.dark{--bg:#111827;--card:#1f2937;--text:#f9fafb;--text2:#9ca3af;--tab:#1f2937;--border:#374151;--shadow:0 2px 8px rgba(0,0,0,.3)}
+body{font-family:'Microsoft YaHei','Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:.3s}
+a{text-decoration:none;color:inherit}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;color:var(--accent)}
+.logo svg{width:28px;height:28px}
+header .actions{display:flex;align-items:center;gap:10px}
+.icon-btn{background:var(--tab);border:none;border-radius:8px;padding:7px 13px;cursor:pointer;color:var(--text);font-size:13px;display:flex;align-items:center;gap:5px;transition:.2s}
+.icon-btn:hover{background:var(--border)}
+
+/* ── Tab Bar ── */
+.tab-bar{display:flex;padding:16px 28px 0;gap:4px;background:var(--card);border-bottom:1px solid var(--border)}
+.tab{padding:10px 22px;border:none;background:transparent;color:var(--text2);font-size:14px;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;transition:.2s;display:flex;align-items:center;gap:7px;position:relative}
+.tab:hover{color:var(--accent);background:var(--tab)}
+.tab.active{color:var(--accent);background:var(--bg);font-weight:600}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
+.tab .badge{background:var(--accent);color:#fff;font-size:11px;padding:1px 6px;border-radius:10px}
+
+/* ── Main Content ── */
+.main{padding:24px 28px;max-width:1400px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── 搜索与筛选 ── */
+.search-area{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.search-box{flex:1;min-width:240px;position:relative}
+.search-box input{width:100%;padding:11px 16px 11px 42px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--text);font-size:14px;outline:none;transition:.2s}
+.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text2)}
+.filter-group{display:flex;gap:8px;flex-wrap:wrap}
+.filter-btn{padding:8px 16px;border:1px solid var(--border);border-radius:20px;background:var(--card);color:var(--text2);font-size:13px;cursor:pointer;transition:.2s;white-space:nowrap}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stats{font-size:13px;color:var(--text2);margin-bottom:16px}
+.stats span{font-weight:600;color:var(--accent)}
+
+/* ── 学校卡片网格 ── */
+.school-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.school-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.25s;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.school-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(37,99,235,.15);border-color:var(--accent)}
+.school-card.dragging{opacity:.6;transform:scale(1.02);box-shadow:0 12px 30px rgba(37,99,235,.25);border:2px dashed var(--accent);cursor:grabbing}
+.school-card.drag-over{border-top:3px solid var(--accent);transform:translateY(2px)}
+.school-card .name{font-weight:600;font-size:14px;margin-bottom:8px;line-height:1.4}
+.school-card .url{font-size:12px;color:var(--accent);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.school-card .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.tag-gong{background:#dcfce7;color:#15803d}
+.tag-min{background:#fef9c3;color:#a16207}
+.tag-bk{background:#dbeafe;color:#1d4ed8}
+.tag-zk{background:#f3e8ff;color:#7c3aed}
+.tag-zy{background:#fee2e2;color:#b91c1c}
+.tag-yx{background:#ffedd5;color:#c2410c}
+.tag-gf{background:#e0f2fe;color:#0369a1}
+.tag:hover{opacity:.8}
+.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.card-arrow{color:var(--accent);font-size:16px}
+
+/* ── 无结果 ── */
+.no-result{padding:60px 20px;text-align:center;color:var(--text2)}
+.no-result .icon{font-size:48px;margin-bottom:16px}
+.no-result p{font-size:15px}
+
+/* ── 政策/商机/公司卡片 ── */
+.link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.link-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:.25s;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.link-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.12);border-color:var(--accent)}
+.link-card .lc-title{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px}
+.link-card .lc-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.link-card .lc-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.link-card .lc-url{font-size:12px;color:var(--accent)}
+.link-card .lc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.ic-blue{background:#dbeafe;color:#1d4ed8}
+.ic-green{background:#dcfce7;color:#15803d}
+.ic-orange{background:#fef3c7;color:#b45309}
+.ic-purple{background:#f3e8ff;color:#7c3aed}
+.ic-red{background:#fee2e2;color:#b91c1c}
+.ic-teal{background:#ccfbf1;color:#0f766e}
+
+/* ── 资料管理 ── */
+.folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.folder-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;cursor:pointer;transition:.25s;box-shadow:var(--shadow);text-align:center}
+.folder-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 6px 20px rgba(37,99,235,.1)}
+.folder-card .fc-icon{font-size:42px;margin-bottom:10px}
+.folder-card .fc-name{font-weight:600;font-size:14px;margin-bottom:6px}
+.folder-card .fc-count{font-size:12px;color:var(--text2)}
+.folder-card .fc-path{font-size:11px;color:var(--text2);margin-top:6px;word-break:break-all}
+
+/* ── 模态框：学校详情 ── */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal.show{display:flex}
+.modal-content{background:var(--card);border-radius:14px;padding:28px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.modal-item{background:var(--tab);border-radius:8px;padding:8px 14px;font-size:13px}
+.modal-item span{color:var(--text2);margin-right:6px}
+.modal-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-top:14px;transition:.2s}
+.modal-btn:hover{background:var(--accent2)}
+.modal-close{position:absolute;right:20px;top:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)}
+.modal-close:hover{color:var(--red)}
+
+/* ── 工具提示 ── */
+.tip{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6}
+
+/* ── 暗色模式切换动画 ── */
+body{transition:background .3s,color .3s}
+.school-card,.link-card,.folder-card,.modal-content,.header,header{transition:background .3s,border-color .3s,box-shadow .3s}
+
+/* ── 快捷键提示 ── */
+.shortcut-hint{font-size:11px;color:var(--text2);background:var(--tab);padding:3px 7px;border-radius:4px}
+
+/* ── 空状态占位 ── */
+.empty-folder{border:2px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text2);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+    业务工作驾驶舱
+  </div>
+  <div class="actions">
+    <button class="icon-btn" onclick="toggleTheme()" title="切换明/暗模式">
+      <span id="themeIcon">🌙</span> 主题
+    </button>
+    <button class="icon-btn" onclick="setAsHomepage()" title="设为浏览器主页">
+      ⭐ 设为主页
+    </button>
+  </div>
+</header>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('school')">
+    🏫 学校查询 <span class="badge">85</span>
+  </button>
+  <button class="tab" onclick="switchTab('policy')">
+    📋 政策查询
+  </button>
+  <button class="tab" onclick="switchTab('business')">
+    💼 商机查询
+  </button>
+  <button class="tab" onclick="switchTab('company')">
+    🏢 公司管理
+  </button>
+  <button class="tab" onclick="switchTab('docs')">
+    📁 资料整理
+  </button>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- ═══ 学校查询 ═══ -->
+  <div id="panel-school" class="panel active">
+
+    <div class="search-area">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="输入学校名称关键词…" oninput="filterSchools()">
+      </div>
+    </div>
+
+    <div class="filter-group" id="filterBtns">
+      <button class="filter-btn active" onclick="toggleFilter(this,'all')">全部</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'公办')">公办</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'民办')">民办</button>
+      <span style="color:var(--text2);margin:0 4px;align-self:center;font-size:13px">|</span>
+      <button class="filter-btn" onclick="toggleFilter(this,'本科')">本科</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'高职')">高职专科</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'职业本科')">职业本科</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'独立学院')">独立学院</button>
+      <span style="color:var(--text2);margin:0 4px;align-self:center;font-size:13px">|</span>
+      <button class="filter-btn" onclick="toggleFilter(this,'师范')">师范类</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'医学')">医学类</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'理工')">理工类</button>
+    </div>
+
+    <div class="stats" id="statsBar">
+      共 <span id="countPublic">–</span> 所公办 · <span id="countPrivate">–</span> 所民办 · 当前筛选 <span id="countFiltered">84</span> 所
+      <span style="margin-left:auto;font-size:12px;color:var(--text2)">
+        💡 拖动卡片可自定义排序 · <a href="javascript:void(0)" onclick="resetSchoolOrder()" style="color:var(--accent)">恢复默认排序</a>
+      </span>
+    </div>
+
+    <div class="school-grid" id="schoolGrid"></div>
+    <div class="no-result" id="noResult" style="display:none">
+      <div class="icon">🔍</div>
+      <p>没有找到符合条件的学校</p>
+    </div>
+  </div>
+
+  <!-- ═══ 政策查询 ═══ -->
+  <div id="panel-policy" class="panel">
+    <div class="tip">📌 点击卡片直接跳转至对应官网，可在官网搜索辽宁省最新政策文件、通知公告等。</div>
+    <div class="link-grid">
+
+      <div class="link-card" onclick="openUrl('https://www.moe.gov.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-blue">🏛️</div>
+          中华人民共和国教育部
+        </div>
+        <div class="lc-desc">教育部官网，发布全国高等教育、职业教育最新政策文件、通知公告、部门规章等。</div>
+        <div class="lc-url">www.moe.gov.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-bk">国家级</span><span class="tag tag-gong">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://jyt.ln.gov.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-green">🏛️</div>
+          辽宁省教育厅
+        </div>
+        <div class="lc-desc">辽宁省教育厅官方门户，发布省内高校招生、就业、高职院校、职业教育最新政策与通知。</div>
+        <div class="lc-url">jyt.ln.gov.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-gong">省级</span><span class="tag tag-green">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.lnzsks.com/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-teal">📝</div>
+          辽宁招生考试之窗
+        </div>
+        <div class="lc-desc">辽宁省高考、成考、自考报名与成绩查询官方平台，发布各批次分数线、志愿填报指南。</div>
+        <div class="lc-url">www.lnzsks.com</div>
+        <div class="lc-tags">
+          <span class="tag tag-gong">考试</span><span class="tag tag-teal">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.moe.gov.cn/jyb_xxgk/xxgk_jyta/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-orange">📜</div>
+          教育部职业教育政策
+        </div>
+        <div class="lc-desc">教育部职业教育与成人教育司，发布高职扩招、"双高计划"、产教融合等最新政策文件。</div>
+        <div class="lc-url">moe.gov.cn/jyb_xxgk/xxgk_jyta</div>
+        <div class="lc-tags">
+          <span class="tag tag-zy">职教政策</span><span class="tag tag-orange">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.eduyun.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-purple">🎓</div>
+          国家智慧教育公共服务平台
+        </div>
+        <div class="lc-desc">教育部主办，汇聚职业教育资源平台政策、国家标准、教师培训资源等内容。</div>
+        <div class="lc-url">www.eduyun.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-purple">资源平台</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.gov.cn/zhengce/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-blue">📰</div>
+          中国政府网政策文件库
+        </div>
+        <div class="lc-desc">国务院政策文件库，支持按时间、关键词检索，可下载PDF全文，用于了解职业教育国家层面政策走向。</div>
+        <div class="lc-url">www.gov.cn/zhengce</div>
+        <div class="lc-tags">
+          <span class="tag tag-bk">国务院</span><span class="tag tag-gong">权威</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ 商机查询 ═══ -->
+  <div id="panel-business" class="panel">
+    <div class="tip">💡 点击进入对应平台后，建议使用关键词"高校"、"职业教育"、"实验室"、"智慧校园"等搜索可快速定位商机。</div>
+    <div class="link-grid">
+
+      <div class="link-card" onclick="openUrl('http://www.ccgp-liaoning.gov.cn/portalindex')">
+        <div class="lc-title">
+          <div class="lc-icon ic-blue">🏛️</div>
+          辽宁省政府采购网
+        </div>
+        <div class="lc-desc">辽宁省政府采购官方平台，发布省级及各市党政机关、事业单位采购公告，高校教育设备采购必经之地。</div>
+        <div class="lc-url">ccgp-liaoning.gov.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-bk">省级采购</span><span class="tag tag-gong">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.ccgp.gov.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-green">🌐</div>
+          中国政府采购网（辽宁分网）
+        </div>
+        <div class="lc-desc">财政部指定政府采购信息发布媒体，覆盖全国政府采购项目，可按地区、行业、金额筛选，含招标、中标公告。</div>
+        <div class="lc-url">www.ccgp.gov.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-gong">国家级</span><span class="tag tag-green">必看</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://lnggzy.gov.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-orange">📊</div>
+          全国公共资源交易平台（辽宁）
+        </div>
+        <div class="lc-desc">涵盖工程建设、政府采购、土地交易、产权交易等，高校基建、后勤采购常在此发布，含完整招标文件下载。</div>
+        <div class="lc-url">lnggzy.gov.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-orange">公共资源</span><span class="tag tag-gong">官方</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.caigou2003.com/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-teal">🔍</div>
+          政府采购信息网（行业垂直）
+        </div>
+        <div class="lc-desc">专业招标信息聚合平台，按行业分类，支持关键词订阅推送，适合监控教育领域采购动态。</div>
+        <div class="lc-url">www.caigou2003.com</div>
+        <div class="lc-tags">
+          <span class="tag tag-teal">行业垂直</span><span class="tag tag-zy">订阅推送</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://www.chinabidding.com.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-purple">📡</div>
+          中国招标投标公共服务平台
+        </div>
+        <div class="lc-desc">国家级招标投标公共服务平台，汇聚全国招标公告，可查招标单位历史中标记录，用于分析竞争对手。</div>
+        <div class="lc-url">www.chinabidding.com.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-purple">招标聚合</span><span class="tag tag-yx">竞争分析</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openUrl('https://liaoning.zhaobiao.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-red">📱</div>
+          招标资源网（APP+网页）
+        </div>
+        <div class="lc-desc">实时推送全国招标采购信息，支持按地区、行业设置关键词订阅，移动端可用，适合外出时监控商机。</div>
+        <div class="lc-url">www.zhaotender.com</div>
+        <div class="lc-tags">
+          <span class="tag tag-red">实时推送</span><span class="tag tag-teal">APP</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ 公司管理 ═══ -->
+  <div id="panel-company" class="panel">
+    <div class="tip">🔐 点击后跳转至登录页或打开本地文件夹，请使用浏览器记住密码功能，不要在本平台存储任何账号密码信息。</div>
+    <div class="link-grid">
+
+      <div class="link-card" onclick="openUrl('http://kuaipu.lnyxxx.cn/')">
+        <div class="lc-title">
+          <div class="lc-icon ic-blue">🏢</div>
+          公司管理平台
+        </div>
+        <div class="lc-desc">公司综合管理平台，集成办公审批、客户管理、项目跟踪、财务报销等核心业务流程，一站式处理日常工作。</div>
+        <div class="lc-url">kuaipu.lnyxxx.cn</div>
+        <div class="lc-tags">
+          <span class="tag tag-bk">OA</span><span class="tag tag-gong">综合</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openFolder('D:\\李佳伟\\电子发票')">
+        <div class="lc-title">
+          <div class="lc-icon ic-green">🧾</div>
+          报销电子票存储库
+        </div>
+        <div class="lc-desc">电子发票专用存储目录，存放差旅、招待、项目等各类报销电子票据，便于财务核对与报销归档。</div>
+        <div class="lc-url">D:\李佳伟\电子发票</div>
+        <div class="lc-tags">
+          <span class="tag tag-green">发票</span><span class="tag tag-teal">本地</span>
+        </div>
+      </div>
+
+      <div class="link-card" onclick="openFolder('D:\\李佳伟')">
+        <div class="lc-title">
+          <div class="lc-icon ic-orange">📁</div>
+          整体资料库
+        </div>
+        <div class="lc-desc">个人工作资料总目录，包含投标文件、项目文件、培训资料、合同协议、学习资料等全部工作文档。</div>
+        <div class="lc-url">D:\李佳伟</div>
+        <div class="lc-tags">
+          <span class="tag tag-orange">总库</span><span class="tag tag-gf">本地</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ 资料整理 ═══ -->
+  <div id="panel-docs" class="panel">
+    <div class="tip">📂 点击卡片直接打开对应文件夹，右键或拖拽均可快速存入文件。建议先确认文件夹路径是否正确（见下方路径提示）。</div>
+    <div class="folder-grid">
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\招投标文件')">
+        <div class="fc-icon">📋</div>
+        <div class="fc-name">招标文件</div>
+        <div class="fc-count">待投标 / 已投标 / 模板</div>
+        <div class="fc-path">D:\李佳伟\招投标文件</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\项目文件')">
+        <div class="fc-icon">📁</div>
+        <div class="fc-name">项目文件</div>
+        <div class="fc-count">进行中 / 已结项 / 项目模板</div>
+        <div class="fc-path">D:\李佳伟\项目文件</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\培训资料')">
+        <div class="fc-icon">🎓</div>
+        <div class="fc-name">培训文件</div>
+        <div class="fc-count">销售培训 / 产品培训 / 客户培训</div>
+        <div class="fc-path">D:\李佳伟\培训资料</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\电子发票')">
+        <div class="fc-icon">💸</div>
+        <div class="fc-name">报销单据</div>
+        <div class="fc-count">本月 / 历史 / 发票模板</div>
+        <div class="fc-path">D:\李佳伟\电子发票</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\合同文件')">
+        <div class="fc-icon">📜</div>
+        <div class="fc-name">合同协议</div>
+        <div class="fc-count">已签合同 / 待签 / 模板</div>
+        <div class="fc-path">D:\李佳伟\合同文件</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\学习文件')">
+        <div class="fc-icon">📚</div>
+        <div class="fc-name">学习资料</div>
+        <div class="fc-count">客户画像 / 行业报告 / 竞品分析</div>
+        <div class="fc-path">D:\李佳伟\学习文件</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('D:\\李佳伟\\客户资料')">
+        <div class="fc-icon">👤</div>
+        <div class="fc-name">客户资料</div>
+        <div class="fc-count">按客户分类 / 联系人 / 跟进记录</div>
+        <div class="fc-path">D:\李佳伟\客户资料</div>
+      </div>
+
+      <div class="folder-card" onclick="openFolder('C:\\Users\\Administrator\\Desktop')">
+        <div class="fc-icon">🗂️</div>
+        <div class="fc-name">桌面（临时区）</div>
+        <div class="fc-count">临时文件 / 下载区</div>
+        <div class="fc-path">C:\Users\Administrator\Desktop</div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:24px">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text2)">⚙️ 资料夹路径设置</h3>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">上方文件夹路径为示例路径，首次使用请确认并修改为实际存在的目录：</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="icon-btn" onclick="openFolder('C:\\Users\\Administrator\\Documents')">📂 打开 Documents 目录</button>
+          <button class="icon-btn" onclick="openFolder('C:\\Users\\Administrator\\Desktop')">🖥️ 打开桌面</button>
+          <button class="icon-btn" onclick="showPathTip()">💡 如何自定义路径</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 学校详情模态框 -->
+<div class="modal" id="schoolModal">
+  <div class="modal-content" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h2 id="modalName">–</h2>
+    <div class="modal-row" id="modalTags"></div>
+    <div style="margin:8px 0">
+      <div class="modal-item"><span>官方网址</span><a id="modalUrl" href="#" target="_blank" style="color:var(--accent)">–</a></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-item"><span>办学性质</span><b id="modalNature">–</b></div>
+      <div class="modal-item"><span>学校类型</span><b id="modalType">–</b></div>
+    </div>
+    <button class="modal-btn" id="modalGoBtn" onclick="goSchool()">
+      🚀 访问官网
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// 85所辽宁高校数据
+// ═══════════════════════════════════════
+const SCHOOLS = [
+  {n:"沈阳航空航天大学",u:"https://www.sau.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连民族大学",u:"https://new.dlnu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"中国医科大学",u:"https://www.cmu.edu.cn/",p:"公办",t:"本科",c:["医学"]},
+  {n:"辽宁石油化工大学",u:"https://www.lnpu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"东北大学",u:"https://www.neu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"辽宁工程技术大学",u:"https://www.lntu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"大连医科大学",u:"https://www.dmu.edu.cn/",p:"公办",t:"本科",c:["医学"]},
+  {n:"锦州医科大学",u:"https://www.jzmu.edu.cn/",p:"公办",t:"本科",c:["医学"]},
+  {n:"大连海洋大学",u:"https://www.dlou.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳化工大学",u:"https://www.syuct.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳建筑大学",u:"https://www.sjzu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"辽东学院",u:"https://www.ldxy.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"辽宁师范大学",u:"https://www.lnnu.edu.cn/",p:"公办",t:"本科",c:["师范"]},
+  {n:"辽宁警察学院",u:"https://www.lnp.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"沈阳体育学院",u:"https://www.syty.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连交通大学",u:"http://www.djtu.edu.cn",p:"公办",t:"本科",c:["理工"]},
+  {n:"大连理工大学",u:"https://www.dlut.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳师范大学",u:"https://www.synu.edu.cn/",p:"公办",t:"本科",c:["师范"]},
+  {n:"大连大学",u:"https://www.dlu.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连理工大学城市学院",u:"http://www.dlutci.edu.cn/",p:"民办",t:"独立学院",c:["理工"]},
+  {n:"沈阳音乐学院",u:"https://www.sycm.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"朝阳师范学院",u:"https://www.cynu.edu.cn/",p:"公办",t:"本科",c:["师范"]},
+  {n:"沈阳工业大学",u:"https://www.sut.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"辽宁中医药大学",u:"https://www.lnutcm.edu.cn/",p:"公办",t:"本科",c:["医学"]},
+  {n:"辽宁何氏医学院",u:"https://www.huh.edu.cn",p:"民办",t:"本科",c:["医学"]},
+  {n:"辽宁理工学院",u:"https://www.lise.edu.cn",p:"民办",t:"独立学院",c:[]},
+  {n:"辽宁科技学院",u:"https://www.lnist.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳农业大学",u:"https://www.syau.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"沈阳医学院",u:"https://www.symc.edu.cn",p:"公办",t:"本科",c:["医学"]},
+  {n:"沈阳城市建设学院",u:"https://www.syucu.edu.cn",p:"民办",t:"独立学院",c:["理工"]},
+  {n:"沈阳理工大学",u:"https://www.sylu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳药科大学",u:"https://www.syphu.edu.cn/",p:"公办",t:"本科",c:["医学"]},
+  {n:"辽宁中医药大学杏林学院",u:"https://www.lncmxl.edu.cn/",p:"民办",t:"独立学院",c:["医学"]},
+  {n:"东北财经大学",u:"https://www.dufe.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连工业大学",u:"https://www.dlpu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"沈阳工程学院",u:"https://www.sie.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"辽宁工业大学",u:"https://www.lnut.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"大连海事大学",u:"https://www.dlmu.edu.cn/",p:"公办",t:"本科",c:["理工"]},
+  {n:"大连科技学院",u:"https://www.dlust.edu.cn",p:"民办",t:"独立学院",c:["理工"]},
+  {n:"渤海大学",u:"http://www.bhu.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"辽宁大学",u:"https://www.lnu.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"辽宁理工职业大学",u:"https://www.lnpu.edu.cn/",p:"民办",t:"职业本科",c:["理工"]},
+  {n:"鲁迅美术学院",u:"https://www.lumei.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连外国语大学",u:"https://www.dlufl.edu.cn/",p:"公办",t:"本科",c:[]},
+  {n:"大连工业大学艺术与信息工程学院",u:"https://www.caie.edu.cn",p:"民办",t:"独立学院",c:[]},
+  {n:"沈阳大学",u:"https://www.syu.edu.cn",p:"公办",t:"本科",c:[]},
+  {n:"营口理工学院",u:"https://www.yku.edu.cn",p:"公办",t:"本科",c:["理工"]},
+  {n:"辽宁师范大学海华学院",u:"https://www.lnhxy.com/",p:"民办",t:"独立学院",c:["师范"]},
+  {n:"锦州医科大学医疗学院",u:"https://www.jymu.edu.cn",p:"民办",t:"独立学院",c:["医学"]},
+  {n:"辽宁职业学院",u:"http://www.lnvc.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁机电职业技术学院",u:"https://www.lnmec.edu.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁农业职业技术学院",u:"https://www.lnnzy.ln.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁生态工程职业学院",u:"https://www.lnst.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"阜新高等专科学校",u:"https://www.fxgz.com.cn/",p:"公办",t:"高职",c:[]},
+  {n:"大连职业技术学院",u:"https://www.dlvtc.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁省交通高等专科学校",u:"https://www.lncc.edu.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁轨道交通职业学院",u:"https://www.lngpi.edu.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁现代服务职业技术学院",u:"https://www.lnxdfwxy.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"抚顺师范高等专科学校",u:"http://www.fsvti.edu.cn",p:"公办",t:"高职",c:["师范"]},
+  {n:"沈阳职业技术学院",u:"https://www.vtcsy.edu.cn",p:"公办",t:"高职",c:[]},
+  {n:"渤海船舶职业学院",u:"https://www.bhcy.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁民族师范高等专科学校",u:"https://www.lnnc.edu.cn/",p:"公办",t:"高职",c:["师范"]},
+  {n:"辽宁特殊教育师范高等专科学校",u:"https://www.lntjsz.edu.cn/",p:"公办",t:"高职",c:["师范"]},
+  {n:"抚顺职业技术学院",u:"http://www.fsvti.edu.cn",p:"公办",t:"高职",c:[]},
+  {n:"朝阳师范高等专科学校（已升格为朝阳师范学院）",u:"https://www.cynu.edu.cn/",p:"公办",t:"高职",c:["师范"]},
+  {n:"辽宁装备制造职业技术学院",u:"http://www.ltcem.com",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁金融职业学院",u:"http://www.lnfvc.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁铁道职业技术学院",u:"http://www.lntdxy.edu.cn",p:"公办",t:"高职",c:["理工"]},
+  {n:"鞍山职业技术学院",u:"https://www.aszyjsxy.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁地质工程职业学院",u:"http://www.lngc.edu.cn",p:"公办",t:"高职",c:["理工"]},
+
+  {n:"辽宁建筑职业学院",u:"https://www.lnjzxy.com/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁轻工职业学院",u:"https://www.lnli.edu.cn",p:"公办",t:"高职",c:[]},
+  {n:"辽阳职业技术学院",u:"https://www.419.com.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁医药职业学院",u:"https://www.lnvcm.edu.cn/",p:"公办",t:"高职",c:["医学"]},
+  {n:"辽宁经济职业技术学院",u:"https://www.lnemci.com/",p:"公办",t:"高职",c:[]},
+  {n:"铁岭卫生职业学院",u:"https://www.lntlhc.com",p:"公办",t:"高职",c:["医学"]},
+  {n:"大连枫叶职业技术学院",u:"https://www.dlfy.edu.cn/",p:"民办",t:"高职",c:[]},
+  {n:"沈阳北软信息职业技术学院",u:"https://www.nbur.edu.cn",p:"民办",t:"高职",c:["理工"]},
+  {n:"盘锦职业技术学院",u:"https://www.pjvtc.edu.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁冶金职业技术学院",u:"https://lnyj.net/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽宁政法职业学院（辽宁公安司法管理干部学院）",u:"https://www.lacpj.org.cn/",p:"公办",t:"高职",c:[]},
+  {n:"辽宁教育学院（辽宁师范高等专科学校）",u:"https://www.lnie.ln.cn/",p:"公办",t:"高职",c:["师范"]},
+  {n:"辽宁石化职业技术学院",u:"https://www.lnpc.edu.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"辽河石油职业技术学院",u:"https://www.lpvtc.cn/",p:"公办",t:"高职",c:["理工"]},
+  {n:"锦州师范高等专科学校",u:"https://www.jzsf.edu.cn",p:"公办",t:"高职",c:["师范"]},
+];
+
+// ── 全局状态 ──
+let activeFilters = new Set(['all']);
+let currentSchool = null;
+let isDark = false;
+
+// ── Tab 切换 ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── 学校筛选 ──
+function toggleFilter(btn, type) {
+  if (type === 'all') {
+    activeFilters.clear();
+    activeFilters.add('all');
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  } else {
+    document.querySelectorAll('.filter-btn')[0].classList.remove('active');
+    activeFilters.delete('all');
+    if (activeFilters.has(type)) {
+      activeFilters.delete(type);
+      btn.classList.remove('active');
+    } else {
+      activeFilters.add(type);
+      btn.classList.add('active');
+    }
+    if (activeFilters.size === 0) {
+      activeFilters.add('all');
+      document.querySelectorAll('.filter-btn')[0].classList.add('active');
+    }
+  }
+  filterSchools();
+}
+
+function filterSchools() {
+  const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = SCHOOLS.filter(s => {
+    const matchKw = !kw || s.n.toLowerCase().includes(kw);
+    if (!matchKw) return false;
+    if (activeFilters.has('all')) return true;
+    // 所有激活的筛选条件必须同时满足（AND 逻辑）
+    for (const f of activeFilters) {
+      let ok = false;
+      if (f === '公办')      ok = s.p === '公办';
+      else if (f === '民办') ok = s.p === '民办';
+      else if (f === '本科') ok = s.t === '本科';
+      else if (f === '高职') ok = s.t === '高职';
+      else if (f === '职业本科') ok = s.t === '职业本科';
+      else if (f === '独立学院') ok = s.t === '独立学院';
+      else if (['师范','医学','理工'].includes(f)) ok = s.c.includes(f);
+      if (!ok) return false; // 任一条件不满足则淘汰
+    }
+    return true;
+  });
+
+  // 统计
+  const pub = SCHOOLS.filter(s => s.p === '公办').length;
+  const priv = SCHOOLS.filter(s => s.p === '民办').length;
+  document.getElementById('countPublic').textContent = pub;
+  document.getElementById('countPrivate').textContent = priv;
+  document.getElementById('countFiltered').textContent = filtered.length;
+
+  const grid = document.getElementById('schoolGrid');
+  const noResult = document.getElementById('noResult');
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    noResult.style.display = 'block';
+    return;
+  }
+  noResult.style.display = 'none';
+
+  grid.innerHTML = filtered.map((s, i) => {
+    const url = s.u || 'javascript:void(0)';
+    const noUrl = !s.u ? '🔒 无独立官网' : '🌐 访问官网';
+    const tagP = s.p === '公办' ? 'tag-gong' : 'tag-min';
+    const tagT = s.t === '本科' ? 'tag-bk' : s.t === '职业本科' ? 'tag-zy' : 'tag-zk';
+    const cats = s.c.map(c => `<span class="tag tag-yx">${c}</span>`).join('');
+    const note = s.n === '锦州医科大学医疗学院' ? '<span class="tag" style="background:#fee2e2;color:#b91c1c">已无独立官网</span>' : '';
+    const originalIndex = SCHOOLS.indexOf(s);
+    return `<div class="school-card" draggable="true" data-index="${originalIndex}" onclick="openSchool(${originalIndex})">
+      <div class="name">${s.n}</div>
+      <div class="url">${s.u || '（无独立官网）'}</div>
+      <div class="tags">
+        <span class="tag ${tagP}">${s.p}</span>
+        <span class="tag ${tagT}">${s.t}</span>
+        ${cats}
+        ${note}
+      </div>
+      <div class="card-footer">
+        <span style="font-size:12px;color:var(--text2)">${s.u ? '点击访问' : '查看详情'}</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 学校详情 ──
+function openSchool(idx) {
+  currentSchool = SCHOOLS[idx];
+  const s = currentSchool;
+  document.getElementById('modalName').textContent = s.n;
+  document.getElementById('modalUrl').textContent = s.u || '（无独立官网）';
+  document.getElementById('modalUrl').href = s.u || 'javascript:void(0)';
+  document.getElementById('modalNature').textContent = s.p + (s.p === '民办' && s.t === '职业本科' ? '（职业本科）' : '');
+  document.getElementById('modalType').textContent = s.t;
+  const tagP = s.p === '公办' ? 'tag-gong' : 'tag-min';
+  const tagT = s.t === '本科' ? 'tag-bk' : s.t === '职业本科' ? 'tag-zy' : 'tag-zk';
+  document.getElementById('modalTags').innerHTML =
+    `<div class="modal-item" style="background:var(--tab)"><span class="tag ${tagP}" style="padding:3px 10px;font-size:12px">${s.p}</span></div>` +
+    `<div class="modal-item"><span class="tag ${tagT}" style="padding:3px 10px;font-size:12px">${s.t}</span></div>` +
+    s.c.map(c => `<div class="modal-item"><span class="tag tag-yx" style="padding:3px 10px;font-size:12px">${c}</span></div>`).join('');
+  document.getElementById('modalGoBtn').style.display = s.u ? 'inline-flex' : 'none';
+  document.getElementById('schoolModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('schoolModal').classList.remove('show');
+  currentSchool = null;
+}
+
+function goSchool() {
+  if (currentSchool && currentSchool.u) {
+    openUrl(currentSchool.u);
+  }
+}
+
+document.getElementById('schoolModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── 通用 ──
+function openUrl(url) {
+  if (!url || url === 'javascript:void(0)') return;
+  window.open(url, '_blank');
+}
+
+function openFolder(path) {
+  window.open('file:///' + path.replace(/\\/g, '/'));
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+}
+
+function setAsHomepage() {
+  alert('设置浏览器主页方法：\n\nChrome/Edge：设置 → 启动时 → 打开特定网页 → 粘贴此文件路径\n\n或右键桌面图标 → 属性 → 目标后面加空格后粘贴此文件路径即可。');
+}
+
+function showPathTip() {
+  alert('自定义资料夹路径方法：\n\n1. 用记事本打开本 HTML 文件\n2. 搜索 "openFolder(\'" 找到资料区代码\n3. 将路径替换为实际存在的目录\n\n示例格式：\nC:\\\\Users\\\\Administrator\\\\Documents\\\\投标文件\n\n注意：双反斜杠 或 使用正斜杠均可。');
+}
+
+// ── 键盘快捷键 ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === '/' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+  if (e.ctrlKey && e.key === '1') switchTab('school');
+  if (e.ctrlKey && e.key === '2') switchTab('policy');
+  if (e.ctrlKey && e.key === '3') switchTab('business');
+  if (e.ctrlKey && e.key === '4') switchTab('company');
+  if (e.ctrlKey && e.key === '5') switchTab('docs');
+});
+
+// ── 拖拽排序功能 ──
+let draggedItem = null;
+let draggedIndex = null;
+
+function initDragAndDrop() {
+  const grid = document.getElementById('schoolGrid');
+  if (!grid) return;
+  
+  grid.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('school-card')) {
+      draggedItem = e.target;
+      draggedIndex = parseInt(draggedItem.dataset.index);
+      e.target.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  });
+  
+  grid.addEventListener('dragend', (e) => {
+    if (e.target.classList.contains('school-card')) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.school-card').forEach(card => card.classList.remove('drag-over'));
+    }
+  });
+  
+  grid.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const afterElement = getDragAfterElement(grid, e.clientY, e.clientX);
+    document.querySelectorAll('.school-card').forEach(card => card.classList.remove('drag-over'));
+    if (afterElement) {
+      afterElement.classList.add('drag-over');
+    }
+  });
+  
+  grid.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(grid, e.clientY, e.clientX);
+    
+    if (draggedItem && afterElement !== draggedItem) {
+      const fromIndex = draggedIndex;
+      const toIndex = parseInt(afterElement.dataset.index);
+      
+      // 重新排序SCHOOLS数组
+      const item = SCHOOLS.splice(fromIndex, 1)[0];
+      const insertIndex = toIndex > fromIndex ? toIndex - 1 : toIndex;
+      SCHOOLS.splice(insertIndex, 0, item);
+      
+      // 保存到localStorage
+      saveSchoolOrder();
+      
+      // 重新渲染
+      filterSchools();
+    }
+    document.querySelectorAll('.school-card').forEach(card => card.classList.remove('drag-over'));
+  });
+}
+
+function getDragAfterElement(container, y, x) {
+  const draggableElements = [...container.querySelectorAll('.school-card:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offsetX = x - box.left - box.width / 2;
+    const offsetY = y - box.top - box.height / 2;
+    const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+    
+    if (distance < closest.distance) {
+      return { distance: distance, element: child };
+    } else {
+      return closest;
+    }
+  }, { distance: Number.POSITIVE_INFINITY }).element;
+}
+
+function saveSchoolOrder() {
+  const order = SCHOOLS.map(s => s.n);
+  localStorage.setItem('schoolOrder', JSON.stringify(order));
+}
+
+function loadSchoolOrder() {
+  const saved = localStorage.getItem('schoolOrder');
+  if (!saved) return;
+  
+  try {
+    const order = JSON.parse(saved);
+    const newOrder = [];
+    const remaining = [...SCHOOLS];
+    
+    // 按照保存的顺序重新排列
+    order.forEach(name => {
+      const idx = remaining.findIndex(s => s.n === name);
+      if (idx !== -1) {
+        newOrder.push(remaining.splice(idx, 1)[0]);
+      }
+    });
+    
+    // 添加新增的学校（如果有）
+    newOrder.push(...remaining);
+    
+    // 替换原数组
+    SCHOOLS.length = 0;
+    SCHOOLS.push(...newOrder);
+  } catch (e) {
+    console.log('加载排序失败:', e);
+  }
+}
+
+function resetSchoolOrder() {
+  localStorage.removeItem('schoolOrder');
+  location.reload();
+}
+
+// ── 初始化 ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadSchoolOrder();
+  filterSchools();
+  initDragAndDrop();
+});
+</script>
+</body>
+</html>
